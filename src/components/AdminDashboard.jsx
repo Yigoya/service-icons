@@ -26,6 +26,10 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 import SettingsIcon from '@mui/icons-material/Settings';
 import PeopleIcon from '@mui/icons-material/People';
 
+// const API_URL = 'http://localhost:5000';
+const API_URL = 'https://hulumoya2.zapto.org';
+
+
 // Styled Components
 const UploadInput = styled('input')({
   display: 'none',
@@ -51,7 +55,7 @@ const Sidebar = styled(Drawer)({
 });
 
 const fetchServices = async () => {
-  const { data } = await axios.get('http://localhost:5000/home');
+  const { data } = await axios.get(`${API_URL}/home`);
   return data['services'];
 };
 
@@ -93,7 +97,7 @@ const AdminDashboard = () => {
     });
 
     try {
-      await axios.post('http://localhost:5000/admin/icons', formData, {
+      await axios.post(`${API_URL}/admin/icons`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -153,7 +157,7 @@ const AdminDashboard = () => {
                     <Box sx={{ minWidth: 100 }}>
                       {service.icon ? (
                         <PreviewImage
-                          src={`http://localhost:5000/uploads/${service.icon}`}
+                          src={`${API_URL}/uploads/${service.icon}`}
                           alt={service.name}
                         />
                       ) : (
