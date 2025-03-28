@@ -9,6 +9,7 @@ import {
   Card,
   CardContent,
   CircularProgress,
+  Collapse,
   Container,
   Drawer,
   FormControlLabel,
@@ -28,6 +29,8 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import SettingsIcon from '@mui/icons-material/Settings';
 import PeopleIcon from '@mui/icons-material/People';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import Alert from '@mui/material/Alert';
 
 const LOCAL_URL = 'http://localhost:5000';
@@ -72,11 +75,8 @@ const FixedUploadContainer = styled(Box)(({ theme }) => ({
 }));
 
 const fetchData = async (baseUrl) => {
-  const { data } = await axios.get(`${baseUrl}/home`);
-  return {
-    services: data['services'],
-    categories: data['serviceCategories'],
-  };
+  const { data } = await axios.get(`${baseUrl}/admin/services`);
+  return data; // Assuming the response is an array of categories with nested services
 };
 
 const AdminDashboard = () => {
@@ -87,6 +87,7 @@ const AdminDashboard = () => {
     const saved = localStorage.getItem('useLocalUrl');
     return saved ? JSON.parse(saved) : false;
   });
+  const [expandedServices, setExpandedServices] = useState({});
 
   const API_URL = useLocalUrl ? LOCAL_URL : SERVER_URL;
 
@@ -100,11 +101,11 @@ const AdminDashboard = () => {
   });
 
   const handleUrlToggle = () => {
-    setUseLocalUrl(prev => !prev);
+    setUseLocalUrl((prev) => !prev);
   };
 
   const handleSnackbarClose = () => {
-    setSnackbar(prev => ({ ...prev, open: false }));
+    setSnackbar((prev) => ({ ...prev, open: false }));
   };
 
   const showSnackbar = (message, severity = 'success') => {
@@ -119,7 +120,7 @@ const AdminDashboard = () => {
         [`${type}-${id}`]: {
           file,
           preview: URL.createObjectURL(file),
-          type, // Store the type (service or category)
+          type,
         },
       }));
     } else {
@@ -180,21 +181,105 @@ const AdminDashboard = () => {
     }
   };
 
-  // New function to organize services by category
-  const organizeServicesByCategory = (services, categories) => {
-    const categoryMap = new Map(categories.map(cat => [cat.id, { ...cat, services: [] }]));
-    const uncategorized = [];
+  const handleToggleService = (serviceId) => {
+    setExpandedServices((prev) => ({
+      ...prev,
+      [serviceId]: !prev[serviceId],
+    }));
+  };
 
-    services.forEach(service => {
-      if (service.categoryId && categoryMap.has(service.categoryId)) {
-        categoryMap.get(service.categoryId).services.push(service);
-      } else {
-        uncategorized.push(service);
-      }
-    });
+  // Recursive component to render nested services
+  const ServiceCard = ({ service, level = 0 }) => {
+    const hasSubServices = service.services && service.services.length > 0;
+    const isExpanded = expandedServices[service.serviceId];
 
-    const organizedCategories = Array.from(categoryMap.values());
-    return { organizedCategories, uncategorized };
+    return (
+      <Box sx={{ pl: level * 4, mb: 2 }}>
+        <Card
+          sx={{
+            bgcolor: '#ffffff',
+            borderRadius: 2,
+            boxShadow: 1,
+            border: '1px solid #e0e0e0',
+          }}
+        >
+          <CardContent
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 3,
+              cursor: hasSubServices ? 'pointer' : 'default',
+            }}
+            onClick={() => hasSubServices && handleToggleService(service.serviceId)}
+          >
+            <Box sx={{ minWidth: 100 }}>
+              {service.icon ? (
+                <PreviewImage src={`${API_URL}/uploads/${service.icon}`} alt={service.name} />
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  No Icon
+                </Typography>
+              )}
+            </Box>
+            <Box sx={{ flexGrow: 1 }}>
+              <Typography variant="h6" color="primary">
+                {service.name}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {service.description}
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <label htmlFor={`icon-upload-service-${service.serviceId}`}>
+                <UploadInput
+                  accept="image/png"
+                  id={`icon-upload-service-${service.serviceId}`}
+                  type="file"
+                  onChange={handleIconChange(service.serviceId, 'service')}
+                />
+                {selectedIcons[`service-${service.serviceId}`] ? (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <PreviewImage
+                      src={selectedIcons[`service-${service.serviceId}`].preview}
+                      alt="Preview"
+                    />
+                    <IconButton
+                      color="error"
+                      onClick={handleRemoveIcon(service.serviceId, 'service')}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Box>
+                ) : (
+                  <Button
+                    variant="outlined"
+                    component="span"
+                    startIcon={<UploadFileIcon />}
+                    sx={{ borderRadius: 2 }}
+                  >
+                    Upload Icon
+                  </Button>
+                )}
+              </label>
+              {hasSubServices && (
+                <IconButton size="small">
+                  {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                </IconButton>
+              )}
+            </Box>
+          </CardContent>
+        </Card>
+        {hasSubServices && (
+          <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+            <Box sx={{ mt: 1 }}>
+              {service.services.map((subService) => (
+                <ServiceCard key={subService.serviceId} service={subService} level={level + 1} />
+              ))}
+            </Box>
+          </Collapse>
+        )}
+      </Box>
+    );
   };
 
   return (
@@ -229,11 +314,7 @@ const AdminDashboard = () => {
             </Typography>
             <FormControlLabel
               control={
-                <Switch
-                  checked={useLocalUrl}
-                  onChange={handleUrlToggle}
-                  color="primary"
-                />
+                <Switch checked={useLocalUrl} onChange={handleUrlToggle} color="primary" />
               }
               label={
                 <Typography variant="body2" color="textSecondary">
@@ -255,232 +336,78 @@ const AdminDashboard = () => {
             </Alert>
           ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {/* Categories with Services */}
-              {(() => {
-                const { organizedCategories, uncategorized } = organizeServicesByCategory(
-                  data.services,
-                  data.categories
-                );
-
-                return (
-                  <>
-                    {/* Categories Section */}
-                    {organizedCategories.map((category) => (
-                      <Box key={category.id}>
-                        <Card sx={{ bgcolor: '#f8f9fa', borderRadius: 2, boxShadow: 2, mb: 3 }}>
-                          <CardContent>
-                            {/* Category Header */}
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 3 }}>
-                              <Box sx={{ minWidth: 100 }}>
-                                {category.icon ? (
-                                  <PreviewImage
-                                    src={`${API_URL}/uploads/${category.icon}`}
-                                    alt={category.categoryName}
-                                  />
-                                ) : (
-                                  <Typography variant="body2" color="text.secondary">
-                                    No Icon
-                                  </Typography>
-                                )}
-                              </Box>
-                              <Box sx={{ flexGrow: 1 }}>
-                                <Typography variant="h5" color="primary" gutterBottom>
-                                  {category.categoryName}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                  {category.description || 'No description'}
-                                </Typography>
-                              </Box>
-                              <Box>
-                                <label htmlFor={`icon-upload-category-${category.id}`}>
-                                  <UploadInput
-                                    accept="image/png"
-                                    id={`icon-upload-category-${category.id}`}
-                                    type="file"
-                                    onChange={handleIconChange(category.id, 'category')}
-                                  />
-                                  {selectedIcons[`category-${category.id}`] ? (
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                      <PreviewImage
-                                        src={selectedIcons[`category-${category.id}`].preview}
-                                        alt="Preview"
-                                      />
-                                      <IconButton
-                                        color="error"
-                                        onClick={handleRemoveIcon(category.id, 'category')}
-                                      >
-                                        <DeleteIcon />
-                                      </IconButton>
-                                    </Box>
-                                  ) : (
-                                    <Button
-                                      variant="outlined"
-                                      component="span"
-                                      startIcon={<UploadFileIcon />}
-                                      sx={{ borderRadius: 2 }}
-                                    >
-                                      Upload Icon
-                                    </Button>
-                                  )}
-                                </label>
-                              </Box>
-                            </Box>
-
-                            {/* Services within Category */}
-                            <Box sx={{ pl: 2 }}>
-                              {category.services.map((service) => (
-                                <Card
-                                  key={service.id}
-                                  sx={{
-                                    bgcolor: '#ffffff',
-                                    borderRadius: 2,
-                                    boxShadow: 1,
-                                    mb: 2,
-                                    border: '1px solid #e0e0e0',
-                                  }}
+              {/* Categories with Nested Services */}
+              {data.map((category) => (
+                <Box key={category.categoryId}>
+                  <Card sx={{ bgcolor: '#f8f9fa', borderRadius: 2, boxShadow: 2, mb: 3 }}>
+                    <CardContent>
+                      {/* Category Header */}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 3 }}>
+                        <Box sx={{ minWidth: 100 }}>
+                          {category.icon ? (
+                            <PreviewImage
+                              src={`${API_URL}/uploads/${category.icon}`}
+                              alt={category.categoryName}
+                            />
+                          ) : (
+                            <Typography variant="body2" color="text.secondary">
+                              No Icon
+                            </Typography>
+                          )}
+                        </Box>
+                        <Box sx={{ flexGrow: 1 }}>
+                          <Typography variant="h5" color="primary" gutterBottom>
+                            {category.categoryName}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {category.description || 'No description'}
+                          </Typography>
+                        </Box>
+                        <Box>
+                          <label htmlFor={`icon-upload-category-${category.categoryId}`}>
+                            <UploadInput
+                              accept="image/png"
+                              id={`icon-upload-category-${category.categoryId}`}
+                              type="file"
+                              onChange={handleIconChange(category.categoryId, 'category')}
+                            />
+                            {selectedIcons[`category-${category.categoryId}`] ? (
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <PreviewImage
+                                  src={selectedIcons[`category-${category.categoryId}`].preview}
+                                  alt="Preview"
+                                />
+                                <IconButton
+                                  color="error"
+                                  onClick={handleRemoveIcon(category.categoryId, 'category')}
                                 >
-                                  <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                                    <Box sx={{ minWidth: 100 }}>
-                                      {service.icon ? (
-                                        <PreviewImage
-                                          src={`${API_URL}/uploads/${service.icon}`}
-                                          alt={service.name}
-                                        />
-                                      ) : (
-                                        <Typography variant="body2" color="text.secondary">
-                                          No Icon
-                                        </Typography>
-                                      )}
-                                    </Box>
-                                    <Box sx={{ flexGrow: 1 }}>
-                                      <Typography variant="h6" color="primary">
-                                        {service.name}
-                                      </Typography>
-                                      <Typography variant="body2" color="text.secondary">
-                                        {service.description}
-                                      </Typography>
-                                    </Box>
-                                    <Box>
-                                      <label htmlFor={`icon-upload-service-${service.id}`}>
-                                        <UploadInput
-                                          accept="image/png"
-                                          id={`icon-upload-service-${service.id}`}
-                                          type="file"
-                                          onChange={handleIconChange(service.id, 'service')}
-                                        />
-                                        {selectedIcons[`service-${service.id}`] ? (
-                                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            <PreviewImage
-                                              src={selectedIcons[`service-${service.id}`].preview}
-                                              alt="Preview"
-                                            />
-                                            <IconButton
-                                              color="error"
-                                              onClick={handleRemoveIcon(service.id, 'service')}
-                                            >
-                                              <DeleteIcon />
-                                            </IconButton>
-                                          </Box>
-                                        ) : (
-                                          <Button
-                                            variant="outlined"
-                                            component="span"
-                                            startIcon={<UploadFileIcon />}
-                                            sx={{ borderRadius: 2 }}
-                                          >
-                                            Upload Icon
-                                          </Button>
-                                        )}
-                                      </label>
-                                    </Box>
-                                  </CardContent>
-                                </Card>
-                              ))}
-                            </Box>
-                          </CardContent>
-                        </Card>
+                                  <DeleteIcon />
+                                </IconButton>
+                              </Box>
+                            ) : (
+                              <Button
+                                variant="outlined"
+                                component="span"
+                                startIcon={<UploadFileIcon />}
+                                sx={{ borderRadius: 2 }}
+                              >
+                                Upload Icon
+                              </Button>
+                            )}
+                          </label>
+                        </Box>
                       </Box>
-                    ))}
 
-                    {/* Uncategorized Services Section */}
-                    {uncategorized.length > 0 && (
-                      <Box>
-                        <Typography variant="h5" color="text.secondary" gutterBottom>
-                          Uncategorized Services
-                        </Typography>
-                        {uncategorized.map((service) => (
-                          <Card
-                            key={service.id}
-                            sx={{
-                              bgcolor: '#ffffff',
-                              borderRadius: 2,
-                              boxShadow: 3,
-                              mb: 2,
-                              border: '1px solid #e0e0e0',
-                            }}
-                          >
-                            <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                              <Box sx={{ minWidth: 100 }}>
-                                {service.icon ? (
-                                  <PreviewImage
-                                    src={`${API_URL}/uploads/${service.icon}`}
-                                    alt={service.name}
-                                  />
-                                ) : (
-                                  <Typography variant="body2" color="text.secondary">
-                                    No Icon
-                                  </Typography>
-                                )}
-                              </Box>
-                              <Box sx={{ flexGrow: 1 }}>
-                                <Typography variant="h6" color="primary">
-                                  {service.name}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                  {service.description}
-                                </Typography>
-                              </Box>
-                              <Box>
-                                <label htmlFor={`icon-upload-service-${service.id}`}>
-                                  <UploadInput
-                                    accept="image/png"
-                                    id={`icon-upload-service-${service.id}`}
-                                    type="file"
-                                    onChange={handleIconChange(service.id, 'service')}
-                                  />
-                                  {selectedIcons[`service-${service.id}`] ? (
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                      <PreviewImage
-                                        src={selectedIcons[`service-${service.id}`].preview}
-                                        alt="Preview"
-                                      />
-                                      <IconButton
-                                        color="error"
-                                        onClick={handleRemoveIcon(service.id, 'service')}
-                                      >
-                                        <DeleteIcon />
-                                      </IconButton>
-                                    </Box>
-                                  ) : (
-                                    <Button
-                                      variant="outlined"
-                                      component="span"
-                                      startIcon={<UploadFileIcon />}
-                                      sx={{ borderRadius: 2 }}
-                                    >
-                                      Upload Icon
-                                    </Button>
-                                  )}
-                                </label>
-                              </Box>
-                            </CardContent>
-                          </Card>
+                      {/* Nested Services */}
+                      <Box sx={{ pl: 2 }}>
+                        {category.services.map((service) => (
+                          <ServiceCard key={service.serviceId} service={service} />
                         ))}
                       </Box>
-                    )}
-                  </>
-                );
-              })()}
+                    </CardContent>
+                  </Card>
+                </Box>
+              ))}
             </Box>
           )}
         </Container>
