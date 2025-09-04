@@ -212,7 +212,7 @@ const AdminDashboard = () => {
             }}
             onClick={() => hasSubServices && handleToggleService(service.serviceId)}
           >
-            <Box sx={{ minWidth: 100 }}>
+            <Box sx={{ width: 100, height: 100 }}>
               {service.icon ? (
                 <PreviewImage src={`${API_URL}/uploads/${service.icon}`} alt={service.name} />
               ) : (
