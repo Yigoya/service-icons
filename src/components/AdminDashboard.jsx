@@ -257,7 +257,7 @@ const AdminDashboard = () => {
                     startIcon={<UploadFileIcon />}
                     sx={{ borderRadius: 2 }}
                   >
-                    Upload Icon fe
+                    Upload Icon
                   </Button>
                 )}
               </label>
