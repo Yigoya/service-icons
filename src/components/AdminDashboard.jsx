@@ -27,7 +27,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import PeopleIcon from '@mui/icons-material/People';
 
 // const API_URL = 'http://localhost:5000';
-const API_URL = 'https://hulumoya2.zapto.org';
+const API_URL = 'https://hulumoya.zapto.org';
 
 // Styled Components
 const UploadInput = styled('input')({
