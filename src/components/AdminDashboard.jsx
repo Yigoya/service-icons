@@ -210,7 +210,7 @@ const AdminDashboard = () => {
               gap: 3,
               cursor: hasSubServices ? 'pointer' : 'default',
             }}
-            onClick={() => hasSubServices && handleToggleService(service.serviceId)}
+            // onClick={() => hasSubServices && handleToggleService(service.serviceId)}
           >
             <Box sx={{ width: 100, height: 100 }}>
               {service.icon ? (
@@ -257,13 +257,13 @@ const AdminDashboard = () => {
                     startIcon={<UploadFileIcon />}
                     sx={{ borderRadius: 2 }}
                   >
-                    Upload Icon
+                    Upload Icon fe
                   </Button>
                 )}
               </label>
               {hasSubServices && (
                 <IconButton size="small">
-                  {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                  {isExpanded ? <ExpandLessIcon onClick={() => handleToggleService(service.serviceId)} /> : <ExpandMoreIcon onClick={() => handleToggleService(service.serviceId)} />}
                 </IconButton>
               )}
             </Box>
