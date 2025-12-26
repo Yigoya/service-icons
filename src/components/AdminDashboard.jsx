@@ -369,17 +369,17 @@ const AdminDashboard = () => {
                               accept="image/png"
                               id={`icon-upload-category-${category.categoryId}`}
                               type="file"
-                              onChange={handleIconChange(category.categoryId, 'category')}
+                              onChange={handleIconChange(category.id, 'category')}
                             />
-                            {selectedIcons[`category-${category.categoryId}`] ? (
+                            {selectedIcons[`category-${category.id}`] ? (
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <PreviewImage
-                                  src={selectedIcons[`category-${category.categoryId}`].preview}
+                                  src={selectedIcons[`category-${category.id}`].preview}
                                   alt="Preview"
                                 />
                                 <IconButton
                                   color="error"
-                                  onClick={handleRemoveIcon(category.categoryId, 'category')}
+                                  onClick={handleRemoveIcon(category.id, 'category')}
                                 >
                                   <DeleteIcon />
                                 </IconButton>
